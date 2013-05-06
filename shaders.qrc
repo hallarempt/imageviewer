@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>gl2.frag</file>
+        <file>gl2.vert</file>
+        <file>lut.frag</file>
+        <file>composite_over.frag</file>
+        <file>composite.vert</file>
+    </qresource>
+</RCC>
