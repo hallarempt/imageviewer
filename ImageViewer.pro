@@ -20,9 +20,15 @@ HEADERS  += MainWindow.h \
     DisplayWidget.h \
     Node.h
 
+CONFIG += mobility
+
 FORMS    += MainWindow.ui
 
 RESOURCES += shaders.qrc
 
-OTHER_FILES += gl2.frag \
-    gl2.vert
+OTHER_FILES += \
+    composite.vert \
+    gl2.vert \
+    composite_over.frag \
+    gl2.frag \
+    lut.frag

@@ -49,7 +49,7 @@ private:
     void composeTwo(QGLFramebufferObject *src, QGLFramebufferObject *dst, GLuint texture, const QString &compositeOp);
 
     void composeLayers();
-    void createCheckerTexture(int w, int h);
+    void createCheckerTexture();
     void createImageTexture();
     void createMesh();
 
@@ -84,7 +84,9 @@ private:
     QGLFramebufferObject *m_compositeSrc;
     QGLFramebufferObject *m_compositeDst;
     QGLFramebufferObject *m_projection;
-    QGLFramebufferObject *m_checkerBuffer;
+
+    GLuint m_checkerTexture;
+    qreal m_checkerSize;
 
     qreal m_rotationAngle;
     qreal m_zoom;

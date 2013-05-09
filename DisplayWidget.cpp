@@ -14,7 +14,7 @@
 DisplayWidget::DisplayWidget(QGLWidget *context, QWidget *parent)
     : QGLWidget(parent, context)
     , m_shareWidget(context)
-    , m_checkerBuffer(0)
+    , m_checkerTexture(0)
     , m_compositeSrc(0)
     , m_compositeDst(0)
     , m_projection(0)
@@ -25,6 +25,7 @@ DisplayWidget::DisplayWidget(QGLWidget *context, QWidget *parent)
     setAttribute(Qt::WA_AcceptTouchEvents);
     grabGesture(Qt::PanGesture);
     grabGesture(Qt::PinchGesture);
+
 }
 
 DisplayWidget::~DisplayWidget()
@@ -36,7 +37,7 @@ DisplayWidget::~DisplayWidget()
     foreach(GLuint texture, m_layers) {
         glDeleteTextures(1, &texture);
     }
-
+    glDeleteTextures(1, &m_checkerTexture);
 
     m_layers.clear();
 }
@@ -55,6 +56,9 @@ void DisplayWidget::initializeGL()
     createMesh();
     createCompositeOpShader();
     createColorCorrectionShader();
+
+    createCheckerTexture();
+
 }
 
 void DisplayWidget::paintGL()
@@ -90,11 +94,12 @@ void DisplayWidget::paintGL()
     m_displayShader->setAttributeBuffer(m_uv0Location, GL_FLOAT, 12 * sizeof(float), 2);
     m_displayShader->enableAttributeArray(m_uv0Location);
     m_displayShader->setUniformValue(m_texture0Location, 0);
-    m_displayShader->setUniformValue(m_textureScaleLocation, QVector2D(1.0f, 1.0f));
+
+    m_displayShader->setUniformValue(m_textureScaleLocation, QVector2D(width() / m_checkerSize, height() / m_checkerSize));
 
     // render checkers
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_checkerBuffer->texture());
+    glBindTexture(GL_TEXTURE_2D, m_checkerTexture);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     m_displayShader->release();
@@ -146,7 +151,6 @@ void DisplayWidget::paintGL()
 void DisplayWidget::resizeGL(int w, int h)
 {
     glViewport(0, 0, w, h);
-    createCheckerTexture(w, h);
     updateProjection();
 }
 
@@ -308,37 +312,34 @@ void DisplayWidget::createMesh()
 }
 
 
-void DisplayWidget::createCheckerTexture(int w, int h)
+void DisplayWidget::createCheckerTexture()
 {
     int size = 64;
     QColor color = Qt::darkGray;
 
     int halfSize = size / 2;
 
-    if(m_checkerBuffer != 0) {
-        delete m_checkerBuffer;
+    if(m_checkerTexture != 0) {
+        glDeleteTextures(1, &m_checkerTexture);
     }
-
-    m_checkerBuffer = new QGLFramebufferObject(w, h, QGLFramebufferObject::CombinedDepthStencil);
-    m_checkerBuffer->bind();
-    glClear(GL_COLOR_BUFFER_BIT);
 
     QImage checkers(size, size, QImage::Format_ARGB32);
     QPainter painter;
     painter.begin(&checkers);
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QBrush(Qt::lightGray));
+    painter.setBrush(QBrush(Qt::white));
     painter.drawRect(0, 0, size, size);
     painter.setBrush(QBrush(color));
     painter.drawRect(0, 0, halfSize, halfSize);
     painter.drawRect(halfSize, halfSize, halfSize, halfSize);
     painter.end();
 
-    QPainter gc(m_checkerBuffer);
-    gc.fillRect(0, 0, w, h, checkers);
-    gc.end();
+    m_checkerTexture = const_cast<QGLContext*>(QGLContext::currentContext())->bindTexture(checkers);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
-    m_checkerBuffer->release();
+    m_checkerSize = size;
 }
 
 
@@ -388,6 +389,4 @@ void DisplayWidget::createColorCorrectionShader()
     if (!r) {
         qDebug() << "failed linking lut shader" << glGetError();
     }
-
-
 }
